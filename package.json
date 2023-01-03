@@ -1,5 +1,4 @@
 {
-    "type": "module",
     "scripts": {
         "prebuild": "run-script-os",
         "prebuild:win32": "rd /s /q .\\dist || mkdir .\\dist\\",
@@ -8,18 +7,18 @@
         "copy:win32": "Xcopy .\\static .\\dist /E /H /C /I",
         "copy:linux": "cp -r static/* ./dist",
         "build": "yarn prebuild && rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript && yarn copy",
-        "start": "cross-env NODE_PATH=./dist nodemon"
+        "start": "nodemon",
+        "prod": "ts-node-transpile-only --project tsconfig.node.json -r tsconfig-paths/register testing.ts"
     },
     "nodemonConfig": {
         "watch": [
-            "testing",
-            "dist",
-            "src"
+            "."
         ],
         "ext": "ts,json",
-        "exec": "ts-node -r tsconfig-paths/register testing/index.ts"
+        "exec": "ts-node --project tsconfig.node.json -r tsconfig-paths/register testing.ts"
     },
     "devDependencies": {
+        "@rollup/plugin-typescript": "latest",
         "@types/node": "latest",
         "cross-env": "latest",
         "esbuild": "latest",
@@ -27,9 +26,9 @@
         "rollup": "latest",
         "rollup-plugin-dts": "latest",
         "rollup-plugin-esbuild": "latest",
+        "run-script-os": "latest",
         "tsconfig-paths": "latest",
         "tslib": "latest",
-        "typescript": "latest",
-        "run-script-os": "latest"
+        "typescript": "latest"
     }
 }
