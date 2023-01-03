@@ -1,20 +1,35 @@
 {
+    "type": "module",
     "scripts": {
-        "build": "rimraf dist && tsc",
+        "prebuild": "run-script-os",
+        "prebuild:win32": "rd /s /q .\\dist || mkdir .\\dist\\",
+        "prebuild:linux": "rm -rf ./dist/*",
+        "copy": "run-script-os",
+        "copy:win32": "Xcopy .\\static .\\dist /E /H /C /I",
+        "copy:linux": "cp -r static/* ./dist",
+        "build": "yarn prebuild && rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript && yarn copy",
         "start": "cross-env NODE_PATH=./dist nodemon"
     },
     "nodemonConfig": {
         "watch": [
+            "testing",
+            "dist",
             "src"
         ],
         "ext": "ts,json",
-        "exec": "ts-node -r tsconfig-paths/register src/index.ts"
+        "exec": "ts-node -r tsconfig-paths/register testing/index.ts"
     },
     "devDependencies": {
         "@types/node": "latest",
-        "tsconfig-paths": "latest",
-        "typescript": "latest",
         "cross-env": "latest",
-        "nodemon": "latest"
+        "esbuild": "latest",
+        "nodemon": "latest",
+        "rollup": "latest",
+        "rollup-plugin-dts": "latest",
+        "rollup-plugin-esbuild": "latest",
+        "tsconfig-paths": "latest",
+        "tslib": "latest",
+        "typescript": "latest",
+        "run-script-os": "latest"
     }
 }

@@ -1,0 +1,22 @@
+{
+  "name": "@elum/signal",
+  "version": "0.0.1-beta.0",
+  "description": "",
+  "main": "index.js",
+  "module": "index.mjs",
+  "typings": "index.d.ts",
+  "license": "MIT",
+  "author": { "name": "Artur Frank", "url":"https://vk.com/gmelum"},
+  "contributors": [],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GMELUM/elum-state.git"
+  },
+  "keywords": [
+    "pm2",
+    "cluster",
+    "master",
+    "promise",
+    "callback"
+  ]
+}
