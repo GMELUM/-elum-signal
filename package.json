@@ -1,0 +1,20 @@
+{
+    "scripts": {
+        "build": "rimraf dist && tsc",
+        "start": "cross-env NODE_PATH=./dist nodemon"
+    },
+    "nodemonConfig": {
+        "watch": [
+            "src"
+        ],
+        "ext": "ts,json",
+        "exec": "ts-node -r tsconfig-paths/register src/index.ts"
+    },
+    "devDependencies": {
+        "@types/node": "latest",
+        "tsconfig-paths": "latest",
+        "typescript": "latest",
+        "cross-env": "latest",
+        "nodemon": "latest"
+    }
+}
