@@ -8,7 +8,7 @@
         "copy:linux": "cp -r static/* ./dist",
         "build": "yarn prebuild && rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript && yarn copy",
         "start": "nodemon",
-        "prod": "ts-node-transpile-only --project tsconfig.node.json -r tsconfig-paths/register testing.ts"
+        "release": "git subtree push --prefix dist https://github.com/elum-team/signal release"
     },
     "nodemonConfig": {
         "watch": [
