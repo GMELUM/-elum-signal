@@ -10,7 +10,7 @@
   "contributors": [],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GMELUM/elum-state.git"
+    "url": "git@github.com:elum-team/signal.git"
   },
   "keywords": [
     "pm2",
