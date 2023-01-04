@@ -1,16 +1,22 @@
 import { createServer, Socket } from "node:net";
+import uuid from "../utils/uuid";
+
+declare module "node:net" {
+  interface Socket {
+    id: string;
+  }
+}
 
 import { SignalCluster } from "../Cluster/Cluster";
-import ClientList from "./classes/ClientList/ClientList";
 
 export type SignalMaster = {};
 
-type TCallbackEvents<
+type TCallbackMaster<
   C extends SignalCluster,
   T extends Record<string, Array<Record<string, any>>> = C
-> = <K extends keyof T, V extends T[K]>(type: K, value: V[0], reply?: (value: V[1]) => void) => void;
+> = <K extends keyof T, V extends T[K]>(socket: Socket, type: K, value: V[0], reply?: (value: V[1]) => void) => void;
 
-type TEvents<T extends SignalCluster> = (callback: TCallbackEvents<T>) => void;
+type TEventsMaster<T extends SignalCluster> = (callback: TCallbackMaster<T>) => void;
 
 class Master<
   M extends SignalMaster,
@@ -24,10 +30,8 @@ class Master<
   private callback: Record<number, (value?: any | PromiseLike<any>) => void> = {};
   private count: number = 0;
 
-  private callbackEvents: TCallbackEvents<C>;
-  private bodyMaster: (master: Master<M, C>, events: TEvents<C>) => void;
-
-  private clients: ClientList = new ClientList();
+  private callbackEvents: TCallbackMaster<C>;
+  private bodyMaster: (master: Master<M, C>, events: TEventsMaster<C>) => void;
 
   private listening = () => console.info(`[INFO] Listening ${this.host}:${this.port}`);
 
@@ -38,8 +42,8 @@ class Master<
   }
 
   private server = createServer((socket) => {
+    socket.id = uuid("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 
-    socket.on("ready", (data: Uint8Array) => { console.log(data) })
     socket.on("error", this.error);
 
     socket.on("data", (data) => {
@@ -51,19 +55,19 @@ class Master<
       if (!type && requestId && this.callback[requestId]) {
         this.callback[requestId](value);
         delete this.callback[requestId]; return;
-      } else { this.callbackEvents(type, value, reply(requestId)) }
+      } else { this.callbackEvents(socket, type, value, reply(requestId)) }
     })
 
   })
     .on("error", this.error)
     .on("listening", this.listening);
 
-  private events: TEvents<C> = (callback) =>
+  private events: TEventsMaster<C> = (callback) =>
     this.callbackEvents = callback;
 
   constructor(callback: (
     master: Master<M, C>,
-    events: TEvents<C>
+    events: TEventsMaster<C>
   ) => void) {
     this.bodyMaster = callback
   }

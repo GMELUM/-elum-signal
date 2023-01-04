@@ -1,4 +1,4 @@
-import { connect, Socket } from "node:net";
+import { createConnection, Socket } from "node:net";
 
 import { SignalMaster } from "../Master/Master";
 
@@ -10,12 +10,18 @@ export type SignalCluster = {
   "LISTENING": [{}, {}];
 };
 
-type TCallbackEvents<
+type TOptConnect = {
+  port: number,
+  host: string,
+  subdomain: string
+}
+
+type TCallbackCluster<
   C extends SignalMaster,
   T extends Record<string, Array<Record<string, any>>> = C> =
   <K extends keyof T, V extends T[K]>(type: K, value: V[0], reply?: <VALUE extends V[1]>(value: VALUE) => void) => void;
 
-type TEvents<T extends SignalMaster> = (callback: TCallbackEvents<T>) => void;
+type TEventsCluster<T extends SignalMaster> = (callback: TCallbackCluster<T>) => void;
 
 class Cluster<
   M extends SignalMaster,
@@ -27,25 +33,26 @@ class Cluster<
   private count: number = 0;
   private callback: Record<number, (value?: any | PromiseLike<any>) => void> = {};
 
-  private callbackEvents: TCallbackEvents<M>;
-  private bodyMaster: (cluster: Cluster<M, C, CT>, events: TEvents<M>) => void;
+  private callbackEvents: TCallbackCluster<M>;
+  private bodyMaster: (cluster: Cluster<M, C, CT>, events: TEventsCluster<M>) => void;
 
   constructor(callback: (
     cluster: Cluster<M, C, CT>,
-    events: TEvents<M>
+    events: TEventsCluster<M>
   ) => void) {
     this.bodyMaster = callback;
   }
 
-  public connect = (port: number, host: string) => {
+  public connect = (opt: TOptConnect) => {
+    const { port, host, subdomain } = opt;
     this.init(port, host);
     this.bodyMaster(this, this.events);
   }
 
-  public events: TEvents<M> = (callback) => this.callbackEvents = callback;
+  public events: TEventsCluster<M> = (callback) => this.callbackEvents = callback;
 
   public init = (port: number, host: string) => {
-    const client = connect({ port: port, host: host });
+    const client = createConnection({ port: port, host: host });
     client.on("end", () => { });
     client.on("connect", () => { console.log("connected") });
     client.on("data", (data) => {

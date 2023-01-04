@@ -7,12 +7,14 @@ interface ISignalCluster extends SignalCluster {
 }
 
 interface ISignalMaster extends SignalMaster {
-
+  "CPU": [{}, { cpu: number }]
 }
 
 new Master<ISignalMaster, ISignalCluster>((master, events) => {
 
-  events((type, value, reply) => {
+  events((socket, type, value, reply) => {
+    const id = socket.id;
+    console.log(id)
     switch (type) {
       case "TEST": reply && reply({ result: true })
     }
@@ -20,11 +22,10 @@ new Master<ISignalMaster, ISignalCluster>((master, events) => {
 
 }).listen(18400, "0.0.0.0");
 
-
 new Cluster<ISignalMaster, ISignalCluster>(async (cluster, events) => {
 
   events((type, value, reply) => {
-
+    console.log(type, value)
   });
 
   const promise = await cluster.send("TEST", { message: "Hello World" });
@@ -35,4 +36,8 @@ new Cluster<ISignalMaster, ISignalCluster>(async (cluster, events) => {
     console.log("callback: ", data)
   })
 
-}).connect(18400, "127.0.0.1");
+}).connect({
+  port: 18400,
+  host: "127.0.0.1",
+  subdomain: "c1"
+});
