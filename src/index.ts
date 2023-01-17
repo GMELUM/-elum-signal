@@ -1,2 +1,2 @@
-export { default as Master } from "./Master/Master";
-export { default as Cluster } from "./Cluster/Cluster";
+export { default as Master, type SignalMaster } from "./Master/Master";
+export { default as Cluster, type SignalCluster } from "./Cluster/Cluster";
