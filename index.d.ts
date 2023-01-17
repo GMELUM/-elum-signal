@@ -54,4 +54,4 @@ declare class Master<M extends SignalMaster, C extends SignalCluster, MT extends
     send<K extends keyof MT, V extends MT[K]>(socket: Socket, type: K, value: V[0], callback: (data: V[1]) => void): void;
 }
 
-export { Cluster, Master };
+export { Cluster, Master, SignalCluster, SignalMaster };
