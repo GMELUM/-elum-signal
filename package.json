@@ -8,7 +8,9 @@
         "copy:linux": "cp -r static/* ./dist",
         "build": "yarn prebuild && rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript && yarn copy",
         "start": "nodemon",
-        "release": "git subtree push --prefix dist https://github.com/elum-team/signal release"
+        "release": "git subtree push --prefix dist https://github.com/elum-team/signal release",
+        "start:master": "ts-node --project tsconfig.node.json -r tsconfig-paths/register master.ts",
+        "start:cluster": "ts-node --project tsconfig.node.json -r tsconfig-paths/register cluster.ts"
     },
     "nodemonConfig": {
         "watch": [

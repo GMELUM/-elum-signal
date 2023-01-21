@@ -1,13 +1,12 @@
 import { createConnection, Socket } from "node:net";
 
 import { SignalMaster } from "../Master/Master";
+import { Status } from "../Master/classes/Cluster";
 
 export type SignalCluster = {
-  "ONLINE": [{}, {}];
-  "DISCONNECT": [{}, {}];
-  "ERROR": [{}, {}];
-  "EXIT": [{}, {}];
-  "LISTENING": [{}, {}];
+  "CLOSE": [{}, {}],
+  "END": [{}, {}],
+  "ERROR": [{}, {}],
 };
 
 type TOptConnect = {
@@ -29,9 +28,16 @@ class Cluster<
   CT extends Record<string, Array<Record<string, any>>> = C
 > {
 
+  public status: Status = Status.CLOSE;
+  public lastRequest: number = Date.now();
+
   private client: Socket;
   private count: number = 0;
   private callback: Record<number, (value?: any | PromiseLike<any>) => void> = {};
+
+  private port: number;
+  private host: string;
+  private subdomain: string;
 
   private callbackEvents: TCallbackCluster<M>;
   private bodyMaster: (cluster: Cluster<M, C, CT>, events: TEventsCluster<M>) => void;
@@ -45,29 +51,62 @@ class Cluster<
 
   public connect = (opt: TOptConnect) => {
     const { port, host, subdomain } = opt;
-    this.init(port, host);
-    this.bodyMaster(this, this.events);
+
+    this.port = port;
+    this.host = host;
+    this.subdomain = subdomain;
+
+    this.bodyMaster(this, (callback) => {
+      this.events(callback);
+      this.init(port, host, subdomain);
+    });
+
   }
+
+  public reconnect = () => this.init(this.port, this.host, this.subdomain);
 
   public events: TEventsCluster<M> = (callback) => this.callbackEvents = callback;
 
-  public init = (port: number, host: string) => {
+  public init = (port: number, host: string, subdomain: string) => {
     const client = createConnection({ port: port, host: host });
-    client.on("end", () => { });
-    client.on("connect", () => { console.log("connected") });
+    client.on("error", () => this.callbackEvents("ERROR", {}));
+    client.on("end", () => this.callbackEvents("END", {}));
+    client.on("close", () => this.callbackEvents("CLOSE", {}));
+    client.on("connect", () => { this.status = Status.HANDSHAKE });
     client.on("data", (data) => {
+
+      this.lastRequest = Date.now();
+
       const { type, value, requestId } = JSON.parse(data.toString());
+
+      console.log("cluster:", { type, value, requestId })
+
       const reply = (requestId: number) => (value: any) => {
         const message = JSON.stringify({ value, requestId });
         client.write(message);
       }
-      if (!type && requestId && this.callback[requestId]) {
+
+      if (this.status === Status.HANDSHAKE) {
+        if (type === "CONNECT") { this.status = Status.CONNECT; return; }
+        if (type === "HANDSHAKE") { reply(requestId)({ subdomain }); return; }
+        return;
+      }
+
+      if (this.status === Status.CONNECT && !type && requestId && this.callback[requestId]) {
         this.callback[requestId](value);
-        delete this.callback[requestId]; return;
-      } else { this.callbackEvents(type, value, reply(requestId)) }
+        delete this.callback[requestId];
+        return;
+      }
+
+      this.callbackEvents(type, value, reply(requestId));
+
     });
+
     this.client = client;
+
   };
+
+  public close = () => this.client.end();
 
   public send<K extends keyof CT, V extends CT[K]>(type: K, value: V[0]): Promise<V[1]>
   public send<K extends keyof CT, V extends CT[K]>(type: K, value: V[0], callback: (data: V[1]) => void): void

@@ -1,5 +1,4 @@
 import { createServer, Socket } from "node:net";
-import uuid from "../utils/uuid";
 
 declare module "node:net" {
   interface Socket {
@@ -8,8 +7,14 @@ declare module "node:net" {
 }
 
 import { SignalCluster } from "../Cluster/Cluster";
+import Cluster from "./classes/Cluster";
 
-export type SignalMaster = {};
+export type SignalMaster = {
+  "END": [{}, {}];
+  "ERROR": [{}, {}];
+  "CLOSE": [{}, {}];
+  "HANDSHAKE": [{}, {}];
+};
 
 type TCallbackMaster<
   C extends SignalCluster,
@@ -24,13 +29,16 @@ class Master<
   MT extends Record<string, Array<Record<string, any>>> = M
 > {
 
-  private port = 18400;
-  private host = "0.0.0.0";
+  public clusters: Map<string, Cluster> = new Map();
 
-  private callback: Record<number, (value?: any | PromiseLike<any>) => void> = {};
-  private count: number = 0;
+  public port = 18400;
+  public host = "0.0.0.0";
 
-  private callbackEvents: TCallbackMaster<C>;
+  public callback: Record<number, (value?: any | PromiseLike<any>) => void> = {};
+  public count: number = 0;
+
+  public callbackEvents: TCallbackMaster<C>;
+
   private bodyMaster: (master: Master<M, C>, events: TEventsMaster<C>) => void;
 
   private listening = () => console.info(`[INFO] Listening ${this.host}:${this.port}`);
@@ -41,24 +49,29 @@ class Master<
     }
   }
 
-  private server = createServer((socket) => {
-    socket.id = uuid("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  private server = createServer((socket) => { new Cluster(socket, this) }
+    // {
+    //   const clusterUUID = uuid("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    //   this.clusters.set(clusterUUID, new Cluster(socket, this));
 
-    socket.on("error", this.error);
+    //   socket.on("error", (error) => this.callbackEvents(socket, "ERROR", error));
+    //   socket.on("connect", () => this.callbackEvents(socket, "CONNECT", {}));
+    //   socket.on("close", () => this.callbackEvents(socket, "DISCONNECT", {}));
 
-    socket.on("data", (data) => {
-      const { type, value, requestId } = JSON.parse(data.toString());
-      const reply = (requestId: number) => (value: any) => {
-        const message = JSON.stringify({ value, requestId });
-        socket.write(message);
-      }
-      if (!type && requestId && this.callback[requestId]) {
-        this.callback[requestId](value);
-        delete this.callback[requestId]; return;
-      } else { this.callbackEvents(socket, type, value, reply(requestId)) }
-    })
+    //   socket.on("data", (data) => {
+    //     const { type, value, requestId } = JSON.parse(data.toString());
+    //     const reply = (requestId: number) => (value: any) => {
+    //       const message = JSON.stringify({ value, requestId });
+    //       socket.write(message);
+    //     }
+    //     if (!type && requestId && this.callback[requestId]) {
+    //       this.callback[requestId](value);
+    //       delete this.callback[requestId]; return;
+    //     } else { this.callbackEvents(socket, type, value, reply(requestId)) }
+    //   })
 
-  })
+    // }
+  )
     .on("error", this.error)
     .on("listening", this.listening);
 
@@ -68,9 +81,7 @@ class Master<
   constructor(callback: (
     master: Master<M, C>,
     events: TEventsMaster<C>
-  ) => void) {
-    this.bodyMaster = callback
-  }
+  ) => void) { this.bodyMaster = callback };
 
   public listen = (port: number = this.port, host: string = this.host) => {
     this.port = port;
