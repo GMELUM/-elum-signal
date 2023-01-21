@@ -2,17 +2,80 @@
 
 var node_net = require('node:net');
 
-const uuid = (masc = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx") => {
-  let d = new Date().getTime();
-  let uuid2 = masc.replace(/[xy]/g, (c) => {
-    let r = (d + Math.random() * 16) % 16 | 0;
-    d = Math.floor(d / 16);
-    return (c == "x" ? r : r & 3 | 8).toString(16);
-  });
-  return uuid2;
+var Status = /* @__PURE__ */ ((Status2) => {
+  Status2["HANDSHAKE"] = "HANDSHAKE";
+  Status2["CONNECT"] = "CONNECT";
+  Status2["CLOSE"] = "CLOSE";
+  return Status2;
+})(Status || {});
+let Cluster$1 = class Cluster {
+  socket;
+  subdomain;
+  status = "CLOSE" /* CLOSE */;
+  constructor(socket, master) {
+    let timer;
+    const closeEvent = () => {
+      socket.destroy();
+      master.clusters.delete(this.subdomain);
+      this.status = "CLOSE" /* CLOSE */;
+    };
+    socket.on("error", closeEvent);
+    socket.on("close", closeEvent);
+    socket.on("data", (data) => {
+      const { type, value, requestId } = JSON.parse(data.toString());
+      console.log("master:", { type, value, requestId });
+      if (this.status === "HANDSHAKE" /* HANDSHAKE */ && !type && requestId && master.callback[requestId]) {
+        master.callback[requestId](value);
+        delete master.callback[requestId];
+        return;
+      }
+      if (this.status === "CLOSE" /* CLOSE */) {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          closeEvent();
+        }, 5e3);
+        this.status = "HANDSHAKE" /* HANDSHAKE */;
+        master.send(socket, "HANDSHAKE", {}, (data2) => {
+          if (data2.subdomain) {
+            clearTimeout(timer);
+            this.subdomain = data2.subdomain;
+            this.status = "CONNECT" /* CONNECT */;
+            master.clusters.set(data2.subdomain, this);
+            master.send(socket, "CONNECT", {});
+          }
+        });
+      }
+      if (this.status === "CONNECT" /* CONNECT */) {
+        if (!type && requestId && master.callback[requestId]) {
+          master.callback[requestId](value);
+          delete master.callback[requestId];
+          return;
+        } else {
+          const reply = (requestId2) => (value2) => {
+            const message = JSON.stringify({ value: value2, requestId: requestId2 });
+            socket.write(message);
+          };
+          master.callbackEvents(socket, type, value, reply(requestId));
+        }
+        return;
+      }
+    });
+    this.socket = socket;
+    this.status = "HANDSHAKE" /* HANDSHAKE */;
+    master.send(socket, "HANDSHAKE", {}, (data) => {
+      if (data.subdomain) {
+        clearTimeout(timer);
+        this.subdomain = data.subdomain;
+        this.status = "CONNECT" /* CONNECT */;
+        master.clusters.set(data.subdomain, this);
+        master.send(socket, "CONNECT", {});
+      }
+    });
+  }
 };
 
 class Master {
+  clusters = /* @__PURE__ */ new Map();
   port = 18400;
   host = "0.0.0.0";
   callback = {};
@@ -25,24 +88,11 @@ class Master {
       console.error("[ERROR] Port is use");
     }
   };
-  server = node_net.createServer((socket) => {
-    socket.id = uuid("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    socket.on("error", this.error);
-    socket.on("data", (data) => {
-      const { type, value, requestId } = JSON.parse(data.toString());
-      const reply = (requestId2) => (value2) => {
-        const message = JSON.stringify({ value: value2, requestId: requestId2 });
-        socket.write(message);
-      };
-      if (!type && requestId && this.callback[requestId]) {
-        this.callback[requestId](value);
-        delete this.callback[requestId];
-        return;
-      } else {
-        this.callbackEvents(socket, type, value, reply(requestId));
-      }
-    });
-  }).on("error", this.error).on("listening", this.listening);
+  server = node_net.createServer(
+    (socket) => {
+      new Cluster$1(socket, this);
+    }
+  ).on("error", this.error).on("listening", this.listening);
   events = (callback) => this.callbackEvents = callback;
   constructor(callback) {
     this.bodyMaster = callback;
@@ -71,9 +121,14 @@ class Master {
 }
 
 class Cluster {
+  status = Status.CLOSE;
+  lastRequest = Date.now();
   client;
   count = 0;
   callback = {};
+  port;
+  host;
+  subdomain;
   callbackEvents;
   bodyMaster;
   constructor(callback) {
@@ -81,33 +136,53 @@ class Cluster {
   }
   connect = (opt) => {
     const { port, host, subdomain } = opt;
-    this.init(port, host);
-    this.bodyMaster(this, this.events);
-  };
-  events = (callback) => this.callbackEvents = callback;
-  init = (port, host) => {
-    const client = node_net.createConnection({ port, host });
-    client.on("end", () => {
+    this.port = port;
+    this.host = host;
+    this.subdomain = subdomain;
+    this.bodyMaster(this, (callback) => {
+      this.events(callback);
+      this.init(port, host, subdomain);
     });
+  };
+  reconnect = () => this.init(this.port, this.host, this.subdomain);
+  events = (callback) => this.callbackEvents = callback;
+  init = (port, host, subdomain) => {
+    const client = node_net.createConnection({ port, host });
+    client.on("error", () => this.callbackEvents("ERROR", {}));
+    client.on("end", () => this.callbackEvents("END", {}));
+    client.on("close", () => this.callbackEvents("CLOSE", {}));
     client.on("connect", () => {
-      console.log("connected");
+      this.status = Status.HANDSHAKE;
     });
     client.on("data", (data) => {
+      this.lastRequest = Date.now();
       const { type, value, requestId } = JSON.parse(data.toString());
+      console.log("cluster:", { type, value, requestId });
       const reply = (requestId2) => (value2) => {
         const message = JSON.stringify({ value: value2, requestId: requestId2 });
         client.write(message);
       };
-      if (!type && requestId && this.callback[requestId]) {
+      if (this.status === Status.HANDSHAKE) {
+        if (type === "CONNECT") {
+          this.status = Status.CONNECT;
+          return;
+        }
+        if (type === "HANDSHAKE") {
+          reply(requestId)({ subdomain });
+          return;
+        }
+        return;
+      }
+      if (this.status === Status.CONNECT && !type && requestId && this.callback[requestId]) {
         this.callback[requestId](value);
         delete this.callback[requestId];
         return;
-      } else {
-        this.callbackEvents(type, value, reply(requestId));
       }
+      this.callbackEvents(type, value, reply(requestId));
     });
     this.client = client;
   };
+  close = () => this.client.end();
   send(type, value, callback) {
     if (!callback) {
       return new Promise((resolve) => {
