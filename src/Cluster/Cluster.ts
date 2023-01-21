@@ -79,8 +79,6 @@ class Cluster<
 
       const { type, value, requestId } = JSON.parse(data.toString());
 
-      console.log("cluster:", { type, value, requestId })
-
       const reply = (requestId: number) => (value: any) => {
         const message = JSON.stringify({ value, requestId });
         client.write(message);

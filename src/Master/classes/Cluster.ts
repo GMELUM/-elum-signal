@@ -30,8 +30,6 @@ class Cluster {
     socket.on("data", (data) => {
       const { type, value, requestId } = JSON.parse(data.toString());
 
-      console.log("master:", { type, value, requestId })
-
       if (this.status === Status.HANDSHAKE && !type && requestId && master.callback[requestId]) {
         master.callback[requestId](value);
         delete master.callback[requestId];

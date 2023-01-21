@@ -21,7 +21,6 @@ let Cluster$1 = class Cluster {
     socket.on("close", closeEvent);
     socket.on("data", (data) => {
       const { type, value, requestId } = JSON.parse(data.toString());
-      console.log("master:", { type, value, requestId });
       if (this.status === "HANDSHAKE" /* HANDSHAKE */ && !type && requestId && master.callback[requestId]) {
         master.callback[requestId](value);
         delete master.callback[requestId];
@@ -155,7 +154,6 @@ class Cluster {
     client.on("data", (data) => {
       this.lastRequest = Date.now();
       const { type, value, requestId } = JSON.parse(data.toString());
-      console.log("cluster:", { type, value, requestId });
       const reply = (requestId2) => (value2) => {
         const message = JSON.stringify({ value: value2, requestId: requestId2 });
         client.write(message);
