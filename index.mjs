@@ -37,6 +37,7 @@ let Cluster$1 = class Cluster {
             clearTimeout(timer);
             this.subdomain = data2.subdomain;
             this.status = "CONNECT" /* CONNECT */;
+            master.callbackEvents(socket, type, data2.subdomain);
             master.clusters.set(data2.subdomain, this);
             master.send(socket, "CONNECT", {});
           }
@@ -81,15 +82,11 @@ class Master {
   bodyMaster;
   listening = () => console.info(`[INFO] Listening ${this.host}:${this.port}`);
   error = (error) => {
-    if (error.name === "EADDRINUSE") {
-      console.error("[ERROR] Port is use");
-    }
+    console.log(error.message);
   };
-  server = createServer(
-    (socket) => {
-      new Cluster$1(socket, this);
-    }
-  ).on("error", this.error).on("listening", this.listening);
+  server = createServer((socket) => {
+    new Cluster$1(socket, this);
+  }).on("error", this.error).on("listening", this.listening);
   events = (callback) => this.callbackEvents = callback;
   constructor(callback) {
     this.bodyMaster = callback;
@@ -180,18 +177,22 @@ class Cluster {
   };
   close = () => this.client.end();
   send(type, value, callback) {
-    if (!callback) {
-      return new Promise((resolve) => {
+    if (this.client.write) {
+      if (!callback) {
+        return new Promise((resolve) => {
+          const requestId = ++this.count;
+          this.callback[requestId] = resolve;
+          const message = JSON.stringify({ type, value, requestId });
+          this.client.write(message);
+        });
+      } else {
         const requestId = ++this.count;
-        this.callback[requestId] = resolve;
+        this.callback[requestId] = callback;
         const message = JSON.stringify({ type, value, requestId });
         this.client.write(message);
-      });
+      }
     } else {
-      const requestId = ++this.count;
-      this.callback[requestId] = callback;
-      const message = JSON.stringify({ type, value, requestId });
-      this.client.write(message);
+      console.log("[ERROR] ");
     }
   }
 }
