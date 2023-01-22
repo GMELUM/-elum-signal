@@ -37,7 +37,6 @@ let Cluster$1 = class Cluster {
             clearTimeout(timer);
             this.subdomain = data2.subdomain;
             this.status = "CONNECT" /* CONNECT */;
-            master.callbackEvents(socket, type, data2.subdomain);
             master.clusters.set(data2.subdomain, this);
             master.send(socket, "CONNECT", {});
           }
@@ -158,6 +157,7 @@ class Cluster {
       if (this.status === Status.HANDSHAKE) {
         if (type === "CONNECT") {
           this.status = Status.CONNECT;
+          this.send("CONNECT", { subdomain: this.subdomain });
           return;
         }
         if (type === "HANDSHAKE") {
