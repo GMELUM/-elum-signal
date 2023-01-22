@@ -15,8 +15,7 @@ new Master<ISignalMaster, ISignalCluster>((master, events) => {
   console.log("master start")
 
   events((socket, type, value, reply) => {
-    const id = socket.id;
-    console.log(id)
+    console.log(type, value)
     switch (type) {
       case "TEST": reply && reply({ result: true })
     }

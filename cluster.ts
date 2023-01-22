@@ -15,6 +15,7 @@ new Cluster<ISignalMaster, ISignalCluster>(async (cluster, events) => {
   console.log("cluster start")
 
   events((type, value, reply) => {
+    console.log(type, value)
     switch (type) {
       case "CLOSE": console.log("CLOSE"); break;
       case "END": console.log("END"); break;

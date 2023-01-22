@@ -85,8 +85,15 @@ class Cluster<
       }
 
       if (this.status === Status.HANDSHAKE) {
-        if (type === "CONNECT") { this.status = Status.CONNECT; return; }
-        if (type === "HANDSHAKE") { reply(requestId)({ subdomain }); return; }
+        if (type === "CONNECT") {
+          this.status = Status.CONNECT;
+          this.send("CONNECT", { subdomain: this.subdomain })
+          return;
+        }
+        if (type === "HANDSHAKE") {
+          reply(requestId)({ subdomain });
+          return;
+        }
         return;
       }
 

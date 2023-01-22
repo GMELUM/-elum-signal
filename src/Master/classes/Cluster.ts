@@ -45,7 +45,7 @@ class Cluster {
             clearTimeout(timer);
             this.subdomain = data.subdomain;
             this.status = Status.CONNECT;
-            master.callbackEvents(socket, type, data.subdomain);
+            // master.callbackEvents(socket, type, data.subdomain);
             master.clusters.set(data.subdomain, this);
             master.send(socket, "CONNECT", {})
           }
