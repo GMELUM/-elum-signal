@@ -22,7 +22,6 @@ new Master<ISignalMaster, ISignalCluster>((master, events) => {
     }
   })
 
-
   setInterval(() => {
     console.log(master.clusters.size)
   }, 2000)

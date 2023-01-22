@@ -10,6 +10,7 @@ import { SignalCluster } from "../Cluster/Cluster";
 import Cluster from "./classes/Cluster";
 
 export type SignalMaster = {
+  "CONNECT": [{}, {}];
   "END": [{}, {}];
   "ERROR": [{}, {}];
   "CLOSE": [{}, {}];
@@ -44,34 +45,10 @@ class Master<
   private listening = () => console.info(`[INFO] Listening ${this.host}:${this.port}`);
 
   private error = (error: Error) => {
-    if (error.name === 'EADDRINUSE') {
-      console.error("[ERROR] Port is use");
-    }
+    console.log(error.message)
   }
 
-  private server = createServer((socket) => { new Cluster(socket, this) }
-    // {
-    //   const clusterUUID = uuid("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-    //   this.clusters.set(clusterUUID, new Cluster(socket, this));
-
-    //   socket.on("error", (error) => this.callbackEvents(socket, "ERROR", error));
-    //   socket.on("connect", () => this.callbackEvents(socket, "CONNECT", {}));
-    //   socket.on("close", () => this.callbackEvents(socket, "DISCONNECT", {}));
-
-    //   socket.on("data", (data) => {
-    //     const { type, value, requestId } = JSON.parse(data.toString());
-    //     const reply = (requestId: number) => (value: any) => {
-    //       const message = JSON.stringify({ value, requestId });
-    //       socket.write(message);
-    //     }
-    //     if (!type && requestId && this.callback[requestId]) {
-    //       this.callback[requestId](value);
-    //       delete this.callback[requestId]; return;
-    //     } else { this.callbackEvents(socket, type, value, reply(requestId)) }
-    //   })
-
-    // }
-  )
+  private server = createServer((socket) => { new Cluster(socket, this) })
     .on("error", this.error)
     .on("listening", this.listening);
 

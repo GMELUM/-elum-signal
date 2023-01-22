@@ -109,19 +109,22 @@ class Cluster<
   public send<K extends keyof CT, V extends CT[K]>(type: K, value: V[0]): Promise<V[1]>
   public send<K extends keyof CT, V extends CT[K]>(type: K, value: V[0], callback: (data: V[1]) => void): void
   public send<K extends keyof CT, V extends CT[K]>(type: K, value: V[0], callback?: (data: V[1]) => void): void | Promise<V[1]> {
-    if (!callback) {
-      return new Promise((resolve) => {
+    if (this.client.write) {
+      if (!callback) {
+        return new Promise((resolve) => {
+          const requestId = ++this.count;
+          this.callback[requestId] = resolve;
+          const message = JSON.stringify({ type, value, requestId });
+          this.client.write(message);
+        });
+      } else {
         const requestId = ++this.count;
-        this.callback[requestId] = resolve;
+        this.callback[requestId] = callback;
         const message = JSON.stringify({ type, value, requestId });
         this.client.write(message);
-      });
-    } else {
-      const requestId = ++this.count;
-      this.callback[requestId] = callback;
-      const message = JSON.stringify({ type, value, requestId });
-      this.client.write(message);
-    }
+      }
+    } else { console.log("[ERROR] "); }
+
   }
 
 }

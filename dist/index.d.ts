@@ -52,6 +52,7 @@ declare module "node:net" {
 }
 
 type SignalMaster = {
+    "CONNECT": [{}, {}];
     "END": [{}, {}];
     "ERROR": [{}, {}];
     "CLOSE": [{}, {}];
