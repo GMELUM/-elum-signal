@@ -12,13 +12,14 @@ let Cluster$1 = class Cluster {
   status = "CLOSE" /* CLOSE */;
   constructor(socket, master) {
     let timer;
-    const closeEvent = () => {
+    const closeEvent = (event) => {
       socket.destroy();
       master.clusters.delete(this.subdomain);
+      master.callbackEvents(socket, event, {});
       this.status = "CLOSE" /* CLOSE */;
     };
-    socket.on("error", closeEvent);
-    socket.on("close", closeEvent);
+    socket.on("error", () => closeEvent("ERROR"));
+    socket.on("close", () => closeEvent("CLOSE"));
     socket.on("data", (data) => {
       try {
         const { type, value, requestId } = JSON.parse(data.toString());
@@ -30,7 +31,7 @@ let Cluster$1 = class Cluster {
         if (this.status === "CLOSE" /* CLOSE */) {
           clearTimeout(timer);
           timer = setTimeout(() => {
-            closeEvent();
+            closeEvent("CLOSE");
           }, 5e3);
           this.status = "HANDSHAKE" /* HANDSHAKE */;
           master.send(socket, "HANDSHAKE", {}, (data2) => {

@@ -18,14 +18,15 @@ class Cluster {
 
     let timer: NodeJS.Timeout;
 
-    const closeEvent = () => {
+    const closeEvent = (event: string) => {
       socket.destroy();
       master.clusters.delete(this.subdomain);
+      master.callbackEvents(socket, event, {});
       this.status = Status.CLOSE;
     };
 
-    socket.on("error", closeEvent);
-    socket.on("close", closeEvent);
+    socket.on("error", () => closeEvent("ERROR"));
+    socket.on("close", () => closeEvent("CLOSE"));
 
     socket.on("data", (data) => {
       try {
@@ -39,7 +40,7 @@ class Cluster {
 
         if (this.status === Status.CLOSE) {
           clearTimeout(timer);
-          timer = setTimeout(() => { closeEvent(); }, 5000);
+          timer = setTimeout(() => { closeEvent("CLOSE"); }, 5000);
           this.status = Status.HANDSHAKE;
           master.send(socket, "HANDSHAKE", {}, (data) => {
             if (data.subdomain) {
