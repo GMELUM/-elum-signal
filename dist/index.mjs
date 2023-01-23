@@ -20,41 +20,46 @@ let Cluster$1 = class Cluster {
     socket.on("error", closeEvent);
     socket.on("close", closeEvent);
     socket.on("data", (data) => {
-      const { type, value, requestId } = JSON.parse(data.toString());
-      if (this.status === "HANDSHAKE" /* HANDSHAKE */ && !type && requestId && master.callback[requestId]) {
-        master.callback[requestId](value);
-        delete master.callback[requestId];
-        return;
-      }
-      if (this.status === "CLOSE" /* CLOSE */) {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          closeEvent();
-        }, 5e3);
-        this.status = "HANDSHAKE" /* HANDSHAKE */;
-        master.send(socket, "HANDSHAKE", {}, (data2) => {
-          if (data2.subdomain) {
-            clearTimeout(timer);
-            this.subdomain = data2.subdomain;
-            this.status = "CONNECT" /* CONNECT */;
-            master.clusters.set(data2.subdomain, this);
-            master.send(socket, "CONNECT", {});
-          }
-        });
-      }
-      if (this.status === "CONNECT" /* CONNECT */) {
-        if (!type && requestId && master.callback[requestId]) {
+      try {
+        const { type, value, requestId } = JSON.parse(data.toString());
+        if (this.status === "HANDSHAKE" /* HANDSHAKE */ && !type && requestId && master.callback[requestId]) {
           master.callback[requestId](value);
           delete master.callback[requestId];
           return;
-        } else {
-          const reply = (requestId2) => (value2) => {
-            const message = JSON.stringify({ value: value2, requestId: requestId2 });
-            socket.write(message);
-          };
-          master.callbackEvents(socket, type, value, reply(requestId));
         }
-        return;
+        if (this.status === "CLOSE" /* CLOSE */) {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            closeEvent();
+          }, 5e3);
+          this.status = "HANDSHAKE" /* HANDSHAKE */;
+          master.send(socket, "HANDSHAKE", {}, (data2) => {
+            if (data2.subdomain) {
+              clearTimeout(timer);
+              this.subdomain = data2.subdomain;
+              this.status = "CONNECT" /* CONNECT */;
+              master.clusters.set(data2.subdomain, this);
+              master.send(socket, "CONNECT", {});
+            }
+          });
+        }
+        ;
+        if (this.status === "CONNECT" /* CONNECT */) {
+          if (!type && requestId && master.callback[requestId]) {
+            master.callback[requestId](value);
+            delete master.callback[requestId];
+            return;
+          } else {
+            const reply = (requestId2) => (value2) => {
+              const message = JSON.stringify({ value: value2, requestId: requestId2 });
+              socket.write(message);
+            };
+            master.callbackEvents(socket, type, value, reply(requestId));
+          }
+          return;
+        }
+      } catch (err) {
+        console.error(err);
       }
     });
     this.socket = socket;
@@ -148,30 +153,34 @@ class Cluster {
       this.status = Status.HANDSHAKE;
     });
     client.on("data", (data) => {
-      this.lastRequest = Date.now();
-      const { type, value, requestId } = JSON.parse(data.toString());
-      const reply = (requestId2) => (value2) => {
-        const message = JSON.stringify({ value: value2, requestId: requestId2 });
-        client.write(message);
-      };
-      if (this.status === Status.HANDSHAKE) {
-        if (type === "CONNECT") {
-          this.status = Status.CONNECT;
-          this.send("CONNECT", { subdomain: this.subdomain });
+      try {
+        this.lastRequest = Date.now();
+        const { type, value, requestId } = JSON.parse(data.toString());
+        const reply = (requestId2) => (value2) => {
+          const message = JSON.stringify({ value: value2, requestId: requestId2 });
+          client.write(message);
+        };
+        if (this.status === Status.HANDSHAKE) {
+          if (type === "CONNECT") {
+            this.status = Status.CONNECT;
+            this.send("CONNECT", { subdomain: this.subdomain });
+            return;
+          }
+          if (type === "HANDSHAKE") {
+            reply(requestId)({ subdomain });
+            return;
+          }
           return;
         }
-        if (type === "HANDSHAKE") {
-          reply(requestId)({ subdomain });
+        if (this.status === Status.CONNECT && !type && requestId && this.callback[requestId]) {
+          this.callback[requestId](value);
+          delete this.callback[requestId];
           return;
         }
-        return;
+        this.callbackEvents(type, value, reply(requestId));
+      } catch (err) {
+        console.error(err);
       }
-      if (this.status === Status.CONNECT && !type && requestId && this.callback[requestId]) {
-        this.callback[requestId](value);
-        delete this.callback[requestId];
-        return;
-      }
-      this.callbackEvents(type, value, reply(requestId));
     });
     this.client = client;
   };

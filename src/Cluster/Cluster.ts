@@ -74,37 +74,37 @@ class Cluster<
     client.on("close", () => this.callbackEvents("CLOSE", {}));
     client.on("connect", () => { this.status = Status.HANDSHAKE });
     client.on("data", (data) => {
+      try {
+        this.lastRequest = Date.now();
 
-      this.lastRequest = Date.now();
+        const { type, value, requestId } = JSON.parse(data.toString());
 
-      const { type, value, requestId } = JSON.parse(data.toString());
+        const reply = (requestId: number) => (value: any) => {
+          const message = JSON.stringify({ value, requestId });
+          client.write(message);
+        }
 
-      const reply = (requestId: number) => (value: any) => {
-        const message = JSON.stringify({ value, requestId });
-        client.write(message);
-      }
-
-      if (this.status === Status.HANDSHAKE) {
-        if (type === "CONNECT") {
-          this.status = Status.CONNECT;
-          this.send("CONNECT", { subdomain: this.subdomain })
+        if (this.status === Status.HANDSHAKE) {
+          if (type === "CONNECT") {
+            this.status = Status.CONNECT;
+            this.send("CONNECT", { subdomain: this.subdomain })
+            return;
+          }
+          if (type === "HANDSHAKE") {
+            reply(requestId)({ subdomain });
+            return;
+          }
           return;
         }
-        if (type === "HANDSHAKE") {
-          reply(requestId)({ subdomain });
+
+        if (this.status === Status.CONNECT && !type && requestId && this.callback[requestId]) {
+          this.callback[requestId](value);
+          delete this.callback[requestId];
           return;
         }
-        return;
-      }
 
-      if (this.status === Status.CONNECT && !type && requestId && this.callback[requestId]) {
-        this.callback[requestId](value);
-        delete this.callback[requestId];
-        return;
-      }
-
-      this.callbackEvents(type, value, reply(requestId));
-
+        this.callbackEvents(type, value, reply(requestId));
+      } catch (err) { console.error(err) }
     });
 
     this.client = client;
