@@ -17,7 +17,7 @@ let Cluster$1 = class Cluster {
     const closeEvent = (event) => {
       socket.destroy();
       master.clusters.delete(this.subdomain);
-      master.callbackEvents(socket, event, {});
+      master.callbackEvents(socket, event, { subdomain: this.subdomain });
       this.status = "CLOSE" /* CLOSE */;
     };
     socket.on("error", () => closeEvent("ERROR"));
