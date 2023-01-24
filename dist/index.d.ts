@@ -62,6 +62,7 @@ type TCallbackMaster<C extends SignalCluster, T extends Record<string, Array<Rec
 type TEventsMaster<T extends SignalCluster> = (callback: TCallbackMaster<T>) => void;
 declare class Master<M extends SignalMaster, C extends SignalCluster, MT extends Record<string, Array<Record<string, any>>> = M> {
     clusters: Map<string, Cluster$1>;
+    private indexIteration;
     port: number;
     host: string;
     callback: Record<number, (value?: any | PromiseLike<any>) => void>;
@@ -74,6 +75,7 @@ declare class Master<M extends SignalMaster, C extends SignalCluster, MT extends
     private events;
     constructor(callback: (master: Master<M, C>, events: TEventsMaster<C>) => void);
     listen: (port?: number, host?: string) => void;
+    nextCluster: () => [string, Cluster$1] | undefined;
     send<K extends keyof MT, V extends MT[K]>(socket: Socket, type: K, value: V[0]): Promise<V[1]>;
     send<K extends keyof MT, V extends MT[K]>(socket: Socket, type: K, value: V[0], callback: (data: V[1]) => void): void;
 }

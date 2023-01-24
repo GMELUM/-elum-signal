@@ -79,6 +79,7 @@ let Cluster$1 = class Cluster {
 
 class Master {
   clusters = /* @__PURE__ */ new Map();
+  indexIteration = 0;
   port = 18400;
   host = "0.0.0.0";
   callback = {};
@@ -101,6 +102,16 @@ class Master {
     this.host = host;
     this.bodyMaster(this, this.events);
     this.server.listen(port, host);
+  };
+  nextCluster = () => {
+    const array = Array.from(this.clusters.entries());
+    if (!array.length) {
+      return void 0;
+    }
+    if (array.length - 1 < this.indexIteration) {
+      this.indexIteration = 0;
+    }
+    return array[this.indexIteration++];
   };
   send(socket, type, value, callback) {
     if (!callback) {

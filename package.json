@@ -11,6 +11,7 @@
         "release": "git subtree push --prefix dist https://github.com/elum-team/signal release",
         "start:master": "ts-node --project tsconfig.node.json -r tsconfig-paths/register master.ts",
         "start:cluster": "ts-node --project tsconfig.node.json -r tsconfig-paths/register cluster.ts",
+        "start:cluster_2": "ts-node --project tsconfig.node.json -r tsconfig-paths/register cluster_2.ts",
         "publish:beta": "npm publish --tag beta"
     },
     "nodemonConfig": {

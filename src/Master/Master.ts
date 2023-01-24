@@ -30,7 +30,8 @@ class Master<
   MT extends Record<string, Array<Record<string, any>>> = M
 > {
 
-  public clusters: Map<string, Cluster> = new Map();
+  public clusters = new Map<string, Cluster>();
+  private indexIteration: number = 0;
 
   public port = 18400;
   public host = "0.0.0.0";
@@ -65,6 +66,13 @@ class Master<
     this.host = host;
     this.bodyMaster(this, this.events)
     this.server.listen(port, host);
+  }
+
+  public nextCluster = () => {
+    const array = Array.from(this.clusters.entries());
+    if (!array.length) { return undefined; }
+    if (array.length - 1 < this.indexIteration) { this.indexIteration = 0; }
+    return array[this.indexIteration++];
   }
 
   public send<K extends keyof MT, V extends MT[K]>(socket: Socket, type: K, value: V[0]): Promise<V[1]>
