@@ -8,9 +8,9 @@ export enum Status {
   "CLOSE" = "CLOSE"
 }
 
-class Cluster {
+class MasterCluster {
 
-  private socket: Socket;
+  public socket: Socket;
   public subdomain: string;
   public status: Status = Status.CLOSE;
 
@@ -87,4 +87,4 @@ class Cluster {
 
 }
 
-export default Cluster;
+export default MasterCluster;

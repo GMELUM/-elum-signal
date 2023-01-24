@@ -7,7 +7,7 @@ declare module "node:net" {
 }
 
 import { SignalCluster } from "../Cluster/Cluster";
-import Cluster from "./classes/Cluster";
+import Cluster from "./classes/MasterCluster";
 
 export type SignalMaster = {
   "CONNECT": [{}, {}];
@@ -68,9 +68,9 @@ class Master<
     this.server.listen(port, host);
   }
 
-  public nextCluster = () => {
+  public nextCluster = (): [string, Cluster] | [undefined, undefined] => {
     const array = Array.from(this.clusters.entries());
-    if (!array.length) { return undefined; }
+    if (!array.length) { return [undefined, undefined]; }
     if (array.length - 1 < this.indexIteration) { this.indexIteration = 0; }
     return array[this.indexIteration++];
   }

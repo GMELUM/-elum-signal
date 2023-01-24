@@ -1,7 +1,7 @@
 import { createConnection, Socket } from "node:net";
 
 import { SignalMaster } from "../Master/Master";
-import { Status } from "../Master/classes/Cluster";
+import { Status } from "../Master/classes/MasterCluster";
 
 export type SignalCluster = {
   "CLOSE": [{}, {}],

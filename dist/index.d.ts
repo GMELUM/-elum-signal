@@ -5,8 +5,8 @@ declare enum Status {
     "CONNECT" = "CONNECT",
     "CLOSE" = "CLOSE"
 }
-declare class Cluster$1 {
-    private socket;
+declare class MasterCluster {
+    socket: Socket;
     subdomain: string;
     status: Status;
     constructor(socket: Socket, master: Master<any, any>);
@@ -61,7 +61,7 @@ type SignalMaster = {
 type TCallbackMaster<C extends SignalCluster, T extends Record<string, Array<Record<string, any>>> = C> = <K extends keyof T, V extends T[K]>(socket: Socket, type: K, value: V[0], reply?: (value: V[1]) => void) => void;
 type TEventsMaster<T extends SignalCluster> = (callback: TCallbackMaster<T>) => void;
 declare class Master<M extends SignalMaster, C extends SignalCluster, MT extends Record<string, Array<Record<string, any>>> = M> {
-    clusters: Map<string, Cluster$1>;
+    clusters: Map<string, MasterCluster>;
     private indexIteration;
     port: number;
     host: string;
@@ -75,7 +75,10 @@ declare class Master<M extends SignalMaster, C extends SignalCluster, MT extends
     private events;
     constructor(callback: (master: Master<M, C>, events: TEventsMaster<C>) => void);
     listen: (port?: number, host?: string) => void;
-    nextCluster: () => [string, Cluster$1] | undefined;
+    nextCluster: () => [string, MasterCluster] | [
+        undefined,
+        undefined
+    ];
     send<K extends keyof MT, V extends MT[K]>(socket: Socket, type: K, value: V[0]): Promise<V[1]>;
     send<K extends keyof MT, V extends MT[K]>(socket: Socket, type: K, value: V[0], callback: (data: V[1]) => void): void;
 }

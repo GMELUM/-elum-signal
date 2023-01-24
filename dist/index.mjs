@@ -6,7 +6,7 @@ var Status = /* @__PURE__ */ ((Status2) => {
   Status2["CLOSE"] = "CLOSE";
   return Status2;
 })(Status || {});
-let Cluster$1 = class Cluster {
+class MasterCluster {
   socket;
   subdomain;
   status = "CLOSE" /* CLOSE */;
@@ -75,7 +75,7 @@ let Cluster$1 = class Cluster {
       }
     });
   }
-};
+}
 
 class Master {
   clusters = /* @__PURE__ */ new Map();
@@ -91,7 +91,7 @@ class Master {
     console.log(error.message);
   };
   server = createServer((socket) => {
-    new Cluster$1(socket, this);
+    new MasterCluster(socket, this);
   }).on("error", this.error).on("listening", this.listening);
   events = (callback) => this.callbackEvents = callback;
   constructor(callback) {
@@ -106,7 +106,7 @@ class Master {
   nextCluster = () => {
     const array = Array.from(this.clusters.entries());
     if (!array.length) {
-      return void 0;
+      return [void 0, void 0];
     }
     if (array.length - 1 < this.indexIteration) {
       this.indexIteration = 0;
